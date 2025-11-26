@@ -6,7 +6,7 @@ sys.path.append(FREECADPATH) # Adiciona o path do FreeCAD ao sys.path
 
 import FreeCAD
 import Part 
-
+import free
 
 # Conversor de .stl/.step/.SLDPRT para g-code
 
