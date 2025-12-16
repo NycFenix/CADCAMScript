@@ -1,23 +1,20 @@
 FREECADPATH = "C:\\Program Files\\FreeCAD 1.0\\bin"
-
 import sys
-import os
 sys.path.append(FREECADPATH) # Adiciona o path do FreeCAD ao sys.path
-
 import FreeCAD
-import Part 
 import Mesh
+import Part
+import MeshPart
+import os
 
-# Conversor de .stl/.step/.SLDPRT para g-code
-
-def type_wrapper (file_path: str):
+def type_converter(file_path):
     """
-    Imports a 3d model file in some extension and converts it to a FreeCAD project
+    Imports a 3d model file in some extension and converts it to a FreeCAD object, now with mor eoptimizede convertion and diferent faces numbers.
 
     :param file_path: str - path to the 3d model file
     :return: FreeCAD document object
     """
-    
+
 
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"The file at {file_path} does not exist.")
@@ -35,22 +32,44 @@ def type_wrapper (file_path: str):
     try:
 
         # Cria Mesh a partir do arquivo STL
-        obj_mesh = new_doc.addObject("Mesh::Feature", "ImportedMesh")
-        obj_mesh.Mesh = Mesh.read(file_path)
+        obj = new_doc.addObject("Mesh::Feature", "ImportedMesh")
+        obj.Mesh = Mesh.read(file_path)
         new_doc.recompute()
         print("STL file imported as Mesh Object.")
-        
-        # Converter mesh para shape 
-        shape = Part.Shape()
-        shape.makeShapeFromMesh(obj_mesh.Mesh.Topology, 7)
-        
-        # Criar sólido a partir do shape
-        solid = Part.makeSolid(shape)
-        obj_solid = new_doc.addObject("Part::Feature", "SolidFromMesh")
-        obj_solid.Shape = solid
+
+        mesh = obj.Mesh
+
+        segments = mesh.getPlanarSegments(0.0001)
+        faces = []
+
+
+        for i in segments:
+            if len(i) > 0:
+                # a segment can have inner holes
+                wires = MeshPart.wireFromSegment(mesh, i)
+                print(f"Made wire number {i}")
+                # we assume that the exterior boundary is that one with the biggest bounding box
+                if len(wires) > 0:
+                    ext = None
+                    max_length=0
+                    for i in wires:
+                        if i.BoundBox.DiagonalLength > max_length:
+                            max_length = i.BoundBox.DiagonalLength
+                            ext = i
+
+                    wires.remove(ext)
+                    # all interior wires mark a hole and must reverse their orientation, otherwise Part.Face fails
+                    for i in wires:
+                        i.reverse()
+
+                    # make sure that the exterior wires comes as first in the list
+                    wires.insert(0, ext)
+                    faces.append(Part.Face(wires))
+
         new_doc.recompute()
         print("FreeCad solid conversion Finished")
-
+        solid = Part.Solid(Part.Shell(faces))
+        Part.show(solid)
 
         freecad_name = os.path.splitext(file_path)[0] + ".FCStd"
         
@@ -62,12 +81,12 @@ def type_wrapper (file_path: str):
                     freecad_name = new_name
                     break
                 i += 1
+
         new_doc.saveAs(freecad_name)
         print(f"FreeCAD document saved as {freecad_name}")
 
 
-        return new_doc
-    
+        
     except Exception as e:
         print(f"An error occurred while importing the file: {e}")
         
@@ -79,5 +98,4 @@ def type_wrapper (file_path: str):
 test_file_path = "torch.STL"
 
 if __name__ == "__main__":
-    new_FCDoc = type_wrapper(test_file_path)
-
+    new_FCDoc = type_converter(test_file_path)
