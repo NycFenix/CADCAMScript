@@ -43,14 +43,14 @@ def type_wrapper (file_path: str):
         # Converter mesh para shape 
         shape = Part.Shape()
         shape.makeShapeFromMesh(obj_mesh.Mesh.Topology, 7)
-        
+
         # Criar sólido a partir do shape
         solid = Part.makeSolid(shape)
         obj_solid = new_doc.addObject("Part::Feature", "SolidFromMesh")
         obj_solid.Shape = solid
         new_doc.recompute()
         print("FreeCad solid conversion Finished")
-
+        
 
         freecad_name = os.path.splitext(file_path)[0] + ".FCStd"
         
@@ -77,6 +77,13 @@ def type_wrapper (file_path: str):
         return None
     
 test_file_path = "torch.STL"
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
     new_FCDoc = type_wrapper(test_file_path)

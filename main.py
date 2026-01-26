@@ -1,4 +1,4 @@
-from generate import type_wrapper
+from convert_to_FC import type_wrapper
 
 
 # Teste de wrapper para objeto FreeCAD
